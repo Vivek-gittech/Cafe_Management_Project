@@ -1,0 +1,44 @@
+# Compiled class files & build directories
+target/
+build/
+*.class
+*.jar
+*.war
+*.ear
+
+# DO NOT ignore maven wrapper files (Required for Docker/Render builds)
+!.mvn/wrapper/maven-wrapper.jar
+
+# Logs and environment variables
+*.log
+.env
+.env.*
+
+# Eclipse / Spring Tool Suite (STS)
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# VS Code
+.vscode/
+
+# OS Specific
+.DS_Store
+Thumbs.db
