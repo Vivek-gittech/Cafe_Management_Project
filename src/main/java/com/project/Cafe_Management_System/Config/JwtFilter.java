@@ -8,6 +8,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -16,9 +18,12 @@ import java.util.List;
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final UserDetailsService userDetailsService;
 
-    public JwtFilter(JwtUtil jwtUtil) {
+    // Inject UserDetailsService alongside JwtUtil
+    public JwtFilter(JwtUtil jwtUtil, UserDetailsService userDetailsService) {
         this.jwtUtil = jwtUtil;
+        this.userDetailsService = userDetailsService;
     }
 
     // ✅ Skip public endpoints (permitAll APIs)
@@ -42,33 +47,32 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String header = req.getHeader("Authorization");
 
-        // ❌ No token → reject
+        // ❌ No token or invalid prefix → skip filter chain / reject
         if (header == null || !header.startsWith("Bearer ")) {
-            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            chain.doFilter(req, res);
             return;
         }
 
         String token = header.substring(7);
 
-        // ❌ Invalid token → reject (Calls single-parameter validateToken)
-        if (!jwtUtil.validateToken(token)) {
-            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
+        // ✅ Extract standard subject (username or email) from token
+        String username = jwtUtil.extractUsername(token);
+
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
+
+            // ✅ Calls two-argument validateToken(token, userDetails)
+            if (jwtUtil.validateToken(token, userDetails)) {
+                UsernamePasswordAuthenticationToken auth =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
         }
-
-        // ✅ Extract user info
-        String email = jwtUtil.getEmail(token);
-        String role = jwtUtil.getRole(token);
-
-        // ✅ Set authentication (IMPORTANT: ROLE_ prefix)
-        UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(
-                        email,
-                        null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role))
-                );
-
-        SecurityContextHolder.getContext().setAuthentication(auth);
 
         chain.doFilter(req, res);
     }
