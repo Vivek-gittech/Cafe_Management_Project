@@ -50,7 +50,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String token = header.substring(7);
 
-        // ❌ Invalid token → reject
+        // ❌ Invalid token → reject (Calls single-parameter validateToken)
         if (!jwtUtil.validateToken(token)) {
             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;

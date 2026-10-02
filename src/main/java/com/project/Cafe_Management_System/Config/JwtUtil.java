@@ -66,6 +66,25 @@ public class JwtUtil {
                 .compact();
     }
 
+    // 1. Single-parameter token validation (checks signature and expiration)
+    public boolean validateToken(String token) {
+        try {
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // 2. Get email / username from token subject
+    public String getEmail(String token) {
+        return extractUsername(token);
+    }
+
+    // 3. Get role claim from token
+    public String getRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
+    }
+
     public Boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
