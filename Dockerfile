@@ -1,27 +1,12 @@
-# 1. Build Stage
-FROM maven:3.9.9-eclipse-temurin-21 AS build
-
+# Step 1: Build stage
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
-
-# Cache dependencies first (improves Render build speeds)
-COPY pom.xml .
-RUN mvn dependency:go-offline
-
-COPY src ./src
+COPY . .
 RUN mvn clean package -DskipTests
 
-# 2. Production Stage
+# Step 2: Run stage
 FROM eclipse-temurin:21-jre
-
 WORKDIR /app
-
-# Run as a non-root user for security
-RUN useradd -m appuser && chown -R appuser:appuser /app
-USER appuser
-
-COPY --from=build /app/target/*.jar app.jar
-
+COPY --from=build /app/target/Cafe_Management_System-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
-
-# Use array syntax with flexible memory/port flags
-ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
