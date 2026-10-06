@@ -2,25 +2,43 @@ package com.project.Cafe_Management_System.Config;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+
+import java.security.Key;
+import java.util.Date;
 import java.util.function.Function;
 
 @Component
 public class JwtUtil {
 
-    // Overload validateToken to accept a single String parameter
+    // Minimum 256-bit key for HMAC-SHA algorithms
+    private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private final long expirationMs = 86400000; // 24 hours
+
+    // Missing generateToken method
+    public String generateToken(String email, String role) {
+        return Jwts.builder()
+                .setSubject(email)
+                .claim("email", email)
+                .claim("role", role)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(key)
+                .compact();
+    }
+
     public Boolean validateToken(String token) {
         return !isTokenExpired(token);
     }
 
-    // Original two-argument validateToken method
     public Boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
-    // Single-argument claim extractors expected by JwtFilter
     public String getEmail(String token) {
         return extractClaim(token, claims -> claims.get("email", String.class));
     }
@@ -34,11 +52,12 @@ public class JwtUtil {
     }
 
     private Boolean isTokenExpired(String token) {
-        return extractClaim(token, Claims::getExpiration).before(new java.util.Date());
+        return extractClaim(token, Claims::getExpiration).before(new Date());
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = Jwts.parserBuilder()
+                .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
